@@ -16,7 +16,7 @@ import { ChatMessageItem } from "@/components/chat-message";
 import { useChatScroll } from "@/hooks/use-chat-scroll";
 import { type ChatMessage, useRealtimeChat } from "@/hooks/use-realtime-chat";
 import { Button } from "@/components/ui/button";
-import { Send } from "lucide-react";
+import { Send, Square } from "lucide-react";
 
 interface RealtimeChatProps {
   roomName: string;
@@ -86,9 +86,13 @@ const MessagesList = memo(
 function InputBar({
   disabled,
   onSend,
+  isLoading,
+  onStop,
 }: {
   disabled: boolean;
   onSend: (text: string) => void;
+  isLoading: boolean;
+  onStop: () => void;
 }) {
   const [value, setValue] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -102,10 +106,10 @@ function InputBar({
 
   const actuallySend = useCallback(() => {
     const text = value.trim();
-    if (!text || disabled) return;
+    if (!text || disabled || isLoading) return;
     setValue("");
     onSend(text);
-  }, [value, disabled, onSend]);
+  }, [value, disabled, isLoading, onSend]);
 
   const onSubmit = useCallback(
     (e: React.FormEvent) => {
@@ -138,12 +142,22 @@ function InputBar({
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={onKeyDown}
         placeholder="Type a message..."
-        disabled={disabled}
+        disabled={disabled || isLoading}
       />
-      {!disabled && value.trim() && (
-        <Button className="rounded-full p-2" type="submit" disabled={disabled}>
-          <Send className="size-4" />
+      {isLoading ? (
+        <Button
+          className="rounded-full p-2"
+          type="button"
+          onClick={onStop}
+        >
+          <Square className="size-4" />
         </Button>
+      ) : (
+        !disabled && value.trim() && (
+          <Button className="rounded-full p-2" type="submit" disabled={disabled}>
+            <Send className="size-4" />
+          </Button>
+        )
       )}
     </form>
   );
@@ -167,6 +181,8 @@ export const RealtimeChat = ({
   });
 
   const [sessionId] = useState(() => crypto.randomUUID());
+  const [isResponding, setIsResponding] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
 
   // Merge messages. O(n) dedupe. Numeric sort
   const allMessages = useMemo(() => {
@@ -185,8 +201,20 @@ export const RealtimeChat = ({
     return unique;
   }, [initialMessages, realtimeMessages]);
 
+  const typingMessage = {
+    id: "__typing__",
+    content: "",
+    user: { name: "assistant" },
+    createdAt: new Date().toISOString(),
+    typing: true,
+  };
+
+  const allMessagesWithTyping = isResponding
+    ? [...allMessages, typingMessage]
+    : allMessages;
+
   // Defer list updates so typing stays responsive
-  const deferredMessages = useDeferredValue(allMessages);
+  const deferredMessages = useDeferredValue(allMessagesWithTyping);
 
   useEffect(() => {
     if (onMessage) onMessage(allMessages);
@@ -196,11 +224,19 @@ export const RealtimeChat = ({
     scrollToBottom();
   }, [deferredMessages, scrollToBottom]);
 
+  useEffect(() => {
+    if (isResponding) scrollToBottom();
+  }, [isResponding, scrollToBottom]);
+
   // Fire and forget. Clear happens inside InputBar
   const onSend = useCallback(
     (text: string) => {
       if (!text.trim() || !isConnected) return;
       void sendMessage(text);
+
+      const controller = new AbortController();
+      abortRef.current = controller;
+      setIsResponding(true);
 
       void fetch(
         "https://justin.atlasagent.ai/webhook/5d983fb1-81cc-468a-97b1-bd143b1f5567",
@@ -208,6 +244,7 @@ export const RealtimeChat = ({
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ query: text, sessionId }),
+          signal: controller.signal,
         }
       )
         .then((r) => r.json())
@@ -217,11 +254,21 @@ export const RealtimeChat = ({
           }
         })
         .catch((err) => {
-          console.error("Failed to fetch chat response", err);
+          if ((err as Error).name !== "AbortError") {
+            console.error("Failed to fetch chat response", err);
+          }
+        })
+        .finally(() => {
+          setIsResponding(false);
         });
     },
     [isConnected, sendMessage, sessionId]
   );
+
+  const onStop = useCallback(() => {
+    abortRef.current?.abort();
+    setIsResponding(false);
+  }, [abortRef]);
 
   return (
     <div className="flex h-dvh w-full flex-col bg-background text-foreground antialiased">
@@ -230,7 +277,12 @@ export const RealtimeChat = ({
         messages={deferredMessages}
         username={username}
       />
-      <InputBar disabled={!isConnected} onSend={onSend} />
+      <InputBar
+        disabled={!isConnected}
+        onSend={onSend}
+        isLoading={isResponding}
+        onStop={onStop}
+      />
     </div>
   );
 };
