@@ -33,8 +33,6 @@ export default function Page() {
 
   return (
     <div className="space-y-4">
-      <Button onClick={loadTree}>Load Trees</Button>
-      <pre>{JSON.stringify(tree, null, 2)}</pre>
       <div className="flex gap-2">
         <Input
           placeholder="parentId"
@@ -48,6 +46,9 @@ export default function Page() {
         />
         <Button onClick={addNode}>Add Node</Button>
       </div>
+
+      <Button onClick={loadTree}>Load Trees</Button>
+      <pre>{JSON.stringify(tree, null, 2)}</pre>
     </div>
   );
 }
