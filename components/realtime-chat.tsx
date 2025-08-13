@@ -96,12 +96,31 @@ function InputBar({
 }) {
   const [value, setValue] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const maxHeightRef = useRef<number | null>(null);
+  const MAX_LINES = 6;
 
   useLayoutEffect(() => {
     const el = textareaRef.current;
     if (!el) return;
-    el.style.height = "0px";
-    el.style.height = `${el.scrollHeight}px`;
+
+    // Compute the exact max height for six lines plus vertical chrome
+    if (maxHeightRef.current == null) {
+      const cs = window.getComputedStyle(el);
+      const lh = parseFloat(cs.lineHeight || "0");
+      const pt = parseFloat(cs.paddingTop || "0");
+      const pb = parseFloat(cs.paddingBottom || "0");
+      const bt = parseFloat(cs.borderTopWidth || "0");
+      const bb = parseFloat(cs.borderBottomWidth || "0");
+      maxHeightRef.current = Math.ceil(lh * MAX_LINES + pt + pb + bt + bb);
+      el.style.maxHeight = `${maxHeightRef.current}px`;
+    }
+
+    // Auto-grow up to the cap. Then enable scrolling
+    el.style.height = "auto";
+    const cap = maxHeightRef.current!;
+    const next = Math.min(el.scrollHeight, cap);
+    el.style.height = `${next}px`;
+    el.style.overflowY = el.scrollHeight > cap ? "auto" : "hidden";
   }, [value]);
 
   const actuallySend = useCallback(() => {
@@ -132,12 +151,12 @@ function InputBar({
   return (
     <form
       onSubmit={onSubmit}
-      className="sticky bottom-0 flex w-full items-end gap-2 border-t border-border bg-background p-4"
+      className="sticky bottom-0 flex w-full items-center gap-2 border-t border-border bg-background p-4"
     >
       <textarea
         ref={textareaRef}
         rows={1}
-        className="flex-1 resize-none rounded-md border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+        className="flex-1 resize-none rounded-xl border bg-background px-4 py-4 text-md leading-5 placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
         value={value}
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={onKeyDown}
@@ -145,17 +164,18 @@ function InputBar({
         disabled={disabled || isLoading}
       />
       {isLoading ? (
-        <Button
-          className="rounded-full p-2"
-          type="button"
-          onClick={onStop}
-        >
+        <Button className="rounded-full p-3" type="button" onClick={onStop}>
           <Square className="size-4" />
         </Button>
       ) : (
-        !disabled && value.trim() && (
-          <Button className="rounded-full p-2" type="submit" disabled={disabled}>
-            <Send className="size-4" />
+        !disabled &&
+        value.trim() && (
+          <Button
+            className="rounded-full p-5"
+            type="submit"
+            disabled={disabled}
+          >
+            <Send className="size-5" />
           </Button>
         )
       )}

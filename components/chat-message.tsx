@@ -39,14 +39,14 @@ export const ChatMessageItem = ({
         )}
         <div
           className={cn(
-            "py-2 px-3 rounded-xl text-sm w-fit",
+            "py-2 px-3 rounded-xl text-md w-fit",
             isOwnMessage
               ? "bg-primary text-primary-foreground"
-              : "bg-muted text-foreground",
+              : "bg-muted text-foreground"
           )}
         >
           {message.typing ? (
-            <span className="flex space-x-1">
+            <span className="flex space-x-1 pt-1">
               <span className="w-1.5 h-1.5 rounded-full bg-current animate-bounce [animation-delay:-0.2s]" />
               <span className="w-1.5 h-1.5 rounded-full bg-current animate-bounce [animation-delay:-0.1s]" />
               <span className="w-1.5 h-1.5 rounded-full bg-current animate-bounce" />
