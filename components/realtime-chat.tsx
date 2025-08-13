@@ -156,7 +156,7 @@ function InputBar({
       <textarea
         ref={textareaRef}
         rows={1}
-        className="flex-1 resize-none rounded-xl border bg-background px-4 py-4 text-lg md:text-base leading-5 placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+        className="flex-1 resize-none rounded-xl border bg-background px-4 py-4 text-lg leading-relaxed md:text-base md:leading-snug placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
         value={value}
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={onKeyDown}
