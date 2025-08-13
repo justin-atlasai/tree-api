@@ -76,7 +76,7 @@ function buildTree(nodes: NodeRow[]): TreeNode[] {
       id,
       label,
       children: children.map((child) =>
-        stripParent(child as { id: Id; label: string; children: unknown[] })
+        stripParent(child as { id: Id; label: string; children: unknown[] }),
       ),
     };
   };

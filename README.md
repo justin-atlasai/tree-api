@@ -153,7 +153,6 @@ returning *;
 
 - **New Button**: Fetch all trees from the database and display them.
 - **Add Node Section**: Two input fields:
-
   1. **Parent ID**: Numeric ID of the parent node.
   2. **Label**: Label for the new node.
 
@@ -166,7 +165,6 @@ returning *;
 - Unit tests for API endpoints to verify correct data retrieval and insertion.
 - Integration tests to ensure the tree structure is returned in proper nested format.
 - Example:
-
   - `GET /api/tree` returns correct hierarchy.
   - `POST /api/tree` inserts node and links to parent.
 
