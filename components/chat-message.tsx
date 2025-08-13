@@ -45,7 +45,15 @@ export const ChatMessageItem = ({
               : "bg-muted text-foreground",
           )}
         >
-          {message.content}
+          {message.typing ? (
+            <span className="flex space-x-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-current animate-bounce [animation-delay:-0.2s]" />
+              <span className="w-1.5 h-1.5 rounded-full bg-current animate-bounce [animation-delay:-0.1s]" />
+              <span className="w-1.5 h-1.5 rounded-full bg-current animate-bounce" />
+            </span>
+          ) : (
+            message.content
+          )}
         </div>
       </div>
     </div>
