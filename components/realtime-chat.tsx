@@ -81,40 +81,48 @@ export const RealtimeChat = ({
   )
 
   return (
-    <div className="flex flex-col h-full w-full bg-background text-foreground antialiased">
+    <div className="flex h-dvh w-full flex-col bg-background text-foreground antialiased">
       {/* Messages */}
-      <div ref={containerRef} className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div
+        ref={containerRef}
+        className="flex flex-1 flex-col justify-end overflow-y-auto p-4 space-y-4"
+      >
         {allMessages.length === 0 ? (
           <div className="text-center text-sm text-muted-foreground">
             No messages yet. Start the conversation!
           </div>
-        ) : null}
-        <div className="space-y-1">
-          {allMessages.map((message, index) => {
-            const prevMessage = index > 0 ? allMessages[index - 1] : null
-            const showHeader = !prevMessage || prevMessage.user.name !== message.user.name
+        ) : (
+          <div className="space-y-1">
+            {allMessages.map((message, index) => {
+              const prevMessage = index > 0 ? allMessages[index - 1] : null
+              const showHeader =
+                !prevMessage || prevMessage.user.name !== message.user.name
 
-            return (
-              <div
-                key={message.id}
-                className="animate-in fade-in slide-in-from-bottom-4 duration-300"
-              >
-                <ChatMessageItem
-                  message={message}
-                  isOwnMessage={message.user.name === username}
-                  showHeader={showHeader}
-                />
-              </div>
-            )
-          })}
-        </div>
+              return (
+                <div
+                  key={message.id}
+                  className="animate-in fade-in slide-in-from-bottom-4 duration-300"
+                >
+                  <ChatMessageItem
+                    message={message}
+                    isOwnMessage={message.user.name === username}
+                    showHeader={showHeader}
+                  />
+                </div>
+              )
+            })}
+          </div>
+        )}
       </div>
 
-      <form onSubmit={handleSendMessage} className="flex w-full gap-2 border-t border-border p-4">
+      <form
+        onSubmit={handleSendMessage}
+        className="sticky bottom-0 flex w-full border-t border-border bg-background p-4 relative"
+      >
         <Input
           className={cn(
-            'rounded-full bg-background text-sm transition-all duration-300',
-            isConnected && newMessage.trim() ? 'w-[calc(100%-36px)]' : 'w-full'
+            'w-full rounded-full bg-background text-sm transition-all duration-300',
+            isConnected && newMessage.trim() && 'pr-10'
           )}
           type="text"
           value={newMessage}
@@ -124,7 +132,7 @@ export const RealtimeChat = ({
         />
         {isConnected && newMessage.trim() && (
           <Button
-            className="aspect-square rounded-full animate-in fade-in slide-in-from-right-4 duration-300"
+            className="absolute right-6 top-1/2 -translate-y-1/2 rounded-full p-2"
             type="submit"
             disabled={!isConnected}
           >
