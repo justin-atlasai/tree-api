@@ -48,11 +48,11 @@ export const RealtimeChat = ({
     // Remove duplicates based on message id
     const uniqueMessages = mergedMessages.filter(
       (message, index, self) =>
-        index === self.findIndex((m) => m.id === message.id),
+        index === self.findIndex((m) => m.id === message.id)
     );
     // Sort by creation date
     const sortedMessages = uniqueMessages.sort((a, b) =>
-      a.createdAt.localeCompare(b.createdAt),
+      a.createdAt.localeCompare(b.createdAt)
     );
 
     return sortedMessages;
@@ -77,7 +77,7 @@ export const RealtimeChat = ({
       sendMessage(newMessage);
       setNewMessage("");
     },
-    [newMessage, isConnected, sendMessage],
+    [newMessage, isConnected, sendMessage]
   );
 
   return (
@@ -117,12 +117,12 @@ export const RealtimeChat = ({
 
       <form
         onSubmit={handleSendMessage}
-        className="sticky bottom-0 flex w-full border-t border-border bg-background p-4 relative"
+        className="sticky bottom-0 flex w-full border-t border-border bg-background p-4"
       >
         <Input
           className={cn(
             "w-full rounded-full bg-background text-sm transition-all duration-300",
-            isConnected && newMessage.trim() && "pr-10",
+            isConnected && newMessage.trim() && "pr-10"
           )}
           type="text"
           value={newMessage}
