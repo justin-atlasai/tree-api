@@ -59,20 +59,26 @@ function buildTree(nodes: NodeRow[]): TreeNode[] {
     if (node.parent_id) {
       const parent = map.get(node.parent_id);
       if (parent) {
-        parent.children.push(node as unknown as TreeNode);
+        parent.children.push(node as TreeNode);
       }
     } else {
-      roots.push(node as unknown as TreeNode);
+      roots.push(node as TreeNode);
     }
   });
 
   const stripParent = (n: {
     id: Id;
     label: string;
-    children: any[];
+    children: unknown[];
   }): TreeNode => {
     const { id, label, children } = n;
-    return { id, label, children: children.map(stripParent) };
+    return {
+      id,
+      label,
+      children: children.map((child) =>
+        stripParent(child as { id: Id; label: string; children: unknown[] })
+      ),
+    };
   };
 
   return roots.map(stripParent);
@@ -86,8 +92,11 @@ export async function GET() {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
     return NextResponse.json(buildTree((data ?? []) as NodeRow[]));
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
+  } catch (e) {
+    if (e instanceof Error) {
+      return NextResponse.json({ error: e.message }, { status: 500 });
+    }
+    return NextResponse.json({ error: "Unknown error" }, { status: 500 });
   }
 }
 
@@ -107,7 +116,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
     return NextResponse.json(data);
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
+  } catch (e) {
+    if (e instanceof Error) {
+      return NextResponse.json({ error: e.message }, { status: 500 });
+    }
+    return NextResponse.json({ error: "Unknown error" }, { status: 500 });
   }
 }
