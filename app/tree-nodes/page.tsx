@@ -10,6 +10,7 @@ export default function Page() {
   const [tree, setTree] = useState<TreeNode[]>([]);
   const [parentId, setParentId] = useState("");
   const [label, setLabel] = useState("");
+  const [deleteId, setDeleteId] = useState("");
 
   const loadTree = async () => {
     const res = await fetch("/api/tree");
@@ -31,6 +32,16 @@ export default function Page() {
     loadTree();
   };
 
+  const deleteNode = async () => {
+    await fetch("/api/tree", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: Number(deleteId) }),
+    });
+    setDeleteId("");
+    loadTree();
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex gap-2">
@@ -45,6 +56,17 @@ export default function Page() {
           onChange={(e) => setLabel(e.target.value)}
         />
         <Button onClick={addNode}>Add Node</Button>
+      </div>
+
+      <div className="flex gap-2">
+        <Input
+          placeholder="parentId"
+          value={deleteId}
+          onChange={(e) => setDeleteId(e.target.value)}
+        />
+        <Button variant="destructive" onClick={deleteNode}>
+          Delete Node
+        </Button>
       </div>
 
       <Button onClick={loadTree}>Load Trees</Button>
