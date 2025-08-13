@@ -6,6 +6,7 @@
     "start": "next start",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
+    "lint:watch": "node --watch --watch-path=app --watch-path=components --watch-path=hooks --watch-path=lib --watch-path=tests scripts/lint-watch.mjs",
     "test": "jest"
   },
   "dependencies": {
