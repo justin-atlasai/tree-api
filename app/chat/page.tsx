@@ -1,10 +1,6 @@
-import { createClient } from "@/lib/supabase/server";
 import { RealtimeChat } from "@/components/realtime-chat";
 
-export default async function Page() {
-  const supabase = await createClient();
-  const { data: treeNodes } = await supabase.from("tree_nodes").select();
-
+export default function Page() {
   return (
     <>
       <RealtimeChat roomName="Chat" username="justinrunes" />
