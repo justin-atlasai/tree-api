@@ -48,14 +48,14 @@ export function useRealtimeChat({ roomName, username }: UseRealtimeChatProps) {
   }, [roomName, username, supabase]);
 
   const sendMessage = useCallback(
-    async (content: string) => {
+    async (content: string, senderName = username) => {
       if (!channel || !isConnected) return;
 
       const message: ChatMessage = {
         id: crypto.randomUUID(),
         content,
         user: {
-          name: username,
+          name: senderName,
         },
         createdAt: new Date().toISOString(),
       };

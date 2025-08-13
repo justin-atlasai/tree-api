@@ -39,6 +39,7 @@ export const RealtimeChat = ({
     username,
   });
   const [newMessage, setNewMessage] = useState("");
+  const [sessionId] = useState(() => crypto.randomUUID());
 
   // Merge realtime messages with initial messages
   const allMessages = useMemo(() => {
@@ -67,11 +68,28 @@ export const RealtimeChat = ({
     scrollToBottom();
   }, [allMessages, scrollToBottom]);
 
-  const sendCurrentMessage = useCallback(() => {
+  const sendCurrentMessage = useCallback(async () => {
     if (!newMessage.trim() || !isConnected) return;
-    sendMessage(newMessage);
+    const messageToSend = newMessage;
+    await sendMessage(messageToSend);
     setNewMessage("");
-  }, [newMessage, isConnected, sendMessage]);
+    try {
+      const response = await fetch(
+        "https://justin.atlasagent.ai/webhook/5d983fb1-81cc-468a-97b1-bd143b1f5567",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query: messageToSend, sessionId }),
+        },
+      );
+      const data = await response.json();
+      if (data?.data) {
+        await sendMessage(data.data, "assistant");
+      }
+    } catch (error) {
+      console.error("Failed to fetch chat response", error);
+    }
+  }, [newMessage, isConnected, sendMessage, sessionId]);
 
   const handleSendMessage = useCallback(
     (e: React.FormEvent) => {
