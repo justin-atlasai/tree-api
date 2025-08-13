@@ -47,11 +47,11 @@ export const RealtimeChat = ({
     // Remove duplicates based on message id
     const uniqueMessages = mergedMessages.filter(
       (message, index, self) =>
-        index === self.findIndex((m) => m.id === message.id),
+        index === self.findIndex((m) => m.id === message.id)
     );
     // Sort by creation date
     const sortedMessages = uniqueMessages.sort((a, b) =>
-      a.createdAt.localeCompare(b.createdAt),
+      a.createdAt.localeCompare(b.createdAt)
     );
 
     return sortedMessages;
@@ -96,7 +96,7 @@ export const RealtimeChat = ({
       e.preventDefault();
       sendCurrentMessage();
     },
-    [sendCurrentMessage],
+    [sendCurrentMessage]
   );
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -115,7 +115,7 @@ export const RealtimeChat = ({
         sendCurrentMessage();
       }
     },
-    [sendCurrentMessage],
+    [sendCurrentMessage]
   );
 
   return (
