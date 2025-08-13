@@ -26,7 +26,7 @@ A full stack application to manage hierarchical tree data structures with Supaba
 
 - **Backend**: Node.js with TypeScript
 - **Database**: Supabase Postgres
-- **Frontend**: Next.js or similar (with Tree Nodes page)
+- **Frontend**: Next.js (Tree Nodes page)
 - **Testing**: Jest or similar testing library
 - **Hosting**: Supabase for database and API hosting
 
