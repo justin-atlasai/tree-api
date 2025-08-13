@@ -123,3 +123,25 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unknown error" }, { status: 500 });
   }
 }
+
+export async function DELETE(req: Request) {
+  try {
+    const { id } = (await req.json()) as { id: Id };
+    const supabase = await getClient();
+    const { data, error } = await supabase
+      .from("tree_nodes")
+      .delete()
+      .eq("id", id)
+      .select()
+      .single();
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+    return NextResponse.json(data);
+  } catch (e) {
+    if (e instanceof Error) {
+      return NextResponse.json({ error: e.message }, { status: 500 });
+    }
+    return NextResponse.json({ error: "Unknown error" }, { status: 500 });
+  }
+}
