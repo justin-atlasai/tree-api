@@ -1,13 +1,11 @@
 "use client";
 
-import { cn } from "@/lib/utils";
 import { ChatMessageItem } from "@/components/chat-message";
 import { useChatScroll } from "@/hooks/use-chat-scroll";
 import { type ChatMessage, useRealtimeChat } from "@/hooks/use-realtime-chat";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Send } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 interface RealtimeChatProps {
   roomName: string;
@@ -69,15 +67,37 @@ export const RealtimeChat = ({
     scrollToBottom();
   }, [allMessages, scrollToBottom]);
 
+  const sendCurrentMessage = useCallback(() => {
+    if (!newMessage.trim() || !isConnected) return;
+    sendMessage(newMessage);
+    setNewMessage("");
+  }, [newMessage, isConnected, sendMessage]);
+
   const handleSendMessage = useCallback(
     (e: React.FormEvent) => {
       e.preventDefault();
-      if (!newMessage.trim() || !isConnected) return;
-
-      sendMessage(newMessage);
-      setNewMessage("");
+      sendCurrentMessage();
     },
-    [newMessage, isConnected, sendMessage]
+    [sendCurrentMessage]
+  );
+
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    textarea.style.height = "auto";
+    textarea.style.height = `${textarea.scrollHeight}px`;
+  }, [newMessage]);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendCurrentMessage();
+      }
+    },
+    [sendCurrentMessage]
   );
 
   return (
@@ -117,22 +137,21 @@ export const RealtimeChat = ({
 
       <form
         onSubmit={handleSendMessage}
-        className="sticky bottom-0 flex w-full border-t border-border bg-background p-4"
+        className="sticky bottom-0 flex w-full items-end gap-2 border-t border-border bg-background p-4"
       >
-        <Input
-          className={cn(
-            "w-full rounded-full bg-background text-sm transition-all duration-300",
-            isConnected && newMessage.trim() && "pr-10"
-          )}
-          type="text"
+        <textarea
+          ref={textareaRef}
+          rows={1}
+          className="flex-1 resize-none rounded-md border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
           value={newMessage}
           onChange={(e) => setNewMessage(e.target.value)}
+          onKeyDown={handleKeyDown}
           placeholder="Type a message..."
           disabled={!isConnected}
         />
         {isConnected && newMessage.trim() && (
           <Button
-            className="absolute right-6 top-1/2 -translate-y-1/2 rounded-full p-2"
+            className="rounded-full p-2"
             type="submit"
             disabled={!isConnected}
           >
