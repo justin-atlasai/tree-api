@@ -151,7 +151,7 @@ function InputBar({
   return (
     <form
       onSubmit={onSubmit}
-      className="sticky bottom-0 flex w-full items-center gap-2 border-t border-border bg-background p-4"
+      className="sticky bottom-0 flex w-full items-center gap-2 border-t border-border bg-background p-4 mb-4"
     >
       <textarea
         ref={textareaRef}
