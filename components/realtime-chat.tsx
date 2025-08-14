@@ -51,7 +51,7 @@ function QuickSuggestions({
             key={i}
             type='button'
             variant='secondary'
-            className='h-auto justify-start text-left text-sm py-3 px-3'
+            className='h-auto justify-start text-left text-lg md:text-base py-3 px-3'
             disabled={disabled}
             aria-label={`Suggestion: ${text}`}
             onClick={() => {
