@@ -25,6 +25,47 @@ interface RealtimeChatProps {
   messages?: ChatMessage[];
 }
 
+/** Tap-friendly quick suggestions that submit immediately */
+function QuickSuggestions({
+  onSelect,
+  disabled,
+  suggestions = [
+    "Summarize this page",
+    "Brainstorm ideas",
+    "Draft a message",
+    "Explain this step",
+  ],
+}: {
+  onSelect: (text: string) => void;
+  disabled: boolean;
+  suggestions?: string[];
+}) {
+  return (
+    <div className="border-t border-border bg-background px-4 pt-3">
+      <div className="mb-2 text-xs font-medium text-muted-foreground">
+        Try one of these
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+        {suggestions.map((text, i) => (
+          <Button
+            key={i}
+            type="button"
+            variant="secondary"
+            className="h-auto justify-start text-left text-sm py-3 px-3"
+            disabled={disabled}
+            aria-label={`Suggestion: ${text}`}
+            onClick={() => {
+              if (!disabled) onSelect(text);
+            }}
+          >
+            {text}
+          </Button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /** Memoized row to avoid rerenders while typing */
 const ChatRow = memo(function ChatRow({
   message,
@@ -297,6 +338,19 @@ export const RealtimeChat = ({
         messages={deferredMessages}
         username={username}
       />
+
+      {/* Suggestions appear above the input bar */}
+      <QuickSuggestions
+        onSelect={onSend}
+        disabled={!isConnected || isResponding}
+        suggestions={[
+          "What can you do",
+          "Summarize the last messages",
+          "Create a task list",
+          "Explain this code",
+        ]}
+      />
+
       <InputBar
         disabled={!isConnected}
         onSend={onSend}
