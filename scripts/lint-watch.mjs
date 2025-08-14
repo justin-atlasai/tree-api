@@ -1,7 +1,7 @@
-import { execSync } from "child_process";
+import { execSync } from 'child_process';
 
 try {
-  execSync("npm run lint", { stdio: "inherit" });
+  execSync('npm run lint', { stdio: 'inherit' });
 } catch {
   // ignore lint errors to keep watcher alive
 }
