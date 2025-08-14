@@ -30,10 +30,10 @@ function QuickSuggestions({
   onSelect,
   disabled,
   suggestions = [
-    'What can you do',
-    'Summarize the last messages',
-    'Create a task list',
-    'Explain this code',
+    'Save my contact and key links',
+    'Send a meeting recap with next steps',
+    // 'Connect on LinkedIn with a personal note',
+    // 'Share an intro kit for your team',
   ],
 }: {
   onSelect: (text: string) => void;
