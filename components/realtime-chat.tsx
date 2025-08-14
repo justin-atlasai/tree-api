@@ -16,7 +16,7 @@ import { ChatMessageItem } from "@/components/chat-message";
 import { useChatScroll } from "@/hooks/use-chat-scroll";
 import { type ChatMessage, useRealtimeChat } from "@/hooks/use-realtime-chat";
 import { Button } from "@/components/ui/button";
-import { Send, Square } from "lucide-react";
+import { Send, Square, ChevronDown } from "lucide-react";
 
 interface RealtimeChatProps {
   roomName: string;
@@ -30,10 +30,10 @@ function QuickSuggestions({
   onSelect,
   disabled,
   suggestions = [
-    "Summarize this page",
-    "Brainstorm ideas",
-    "Draft a message",
-    "Explain this step",
+    "What can you do",
+    "Summarize the last messages",
+    "Create a task list",
+    "Explain this code",
   ],
 }: {
   onSelect: (text: string) => void;
@@ -66,6 +66,27 @@ function QuickSuggestions({
   );
 }
 
+/** Floating scroll-to-bottom button when the user is not at the bottom */
+function ScrollToBottomFab({
+  visible,
+  onClick,
+}: {
+  visible: boolean;
+  onClick: () => void;
+}) {
+  if (!visible) return null;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label="Scroll to bottom"
+      className="fixed right-4 bottom-28 md:bottom-32 z-40 rounded-full border bg-background shadow-lg p-2 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-ring"
+    >
+      <ChevronDown className="size-5" />
+    </button>
+  );
+}
+
 /** Memoized row to avoid rerenders while typing */
 const ChatRow = memo(function ChatRow({
   message,
@@ -94,7 +115,7 @@ const MessagesList = memo(
       return (
         <div
           ref={ref}
-          className="flex flex-1 flex-col justify-end overflow-y-auto p-4 space-y-4"
+          className="relative flex flex-1 flex-col justify-end overflow-y-auto p-4 space-y-4"
         >
           {messages.length === 0 ? (
             <div className="text-center text-sm text-muted-foreground">
@@ -245,6 +266,29 @@ export const RealtimeChat = ({
   const [isResponding, setIsResponding] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
 
+  // track whether the user is at the bottom
+  const [isAtBottom, setIsAtBottom] = useState(true);
+  const wasAtBottomRef = useRef(true);
+  const prevLenRef = useRef(0);
+
+  // attach scroll listener to the messages container
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const EPS = 24;
+    const handleScroll = () => {
+      const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight <= EPS;
+      setIsAtBottom(atBottom);
+      wasAtBottomRef.current = atBottom;
+    };
+
+    // init and listen
+    handleScroll();
+    el.addEventListener("scroll", handleScroll, { passive: true });
+    return () => el.removeEventListener("scroll", handleScroll);
+  }, [containerRef]);
+
   // Merge messages. O(n) dedupe. Numeric sort
   const allMessages = useMemo(() => {
     const merged = [...initialMessages, ...realtimeMessages];
@@ -277,14 +321,23 @@ export const RealtimeChat = ({
   // Defer list updates so typing stays responsive
   const deferredMessages = useDeferredValue(allMessagesWithTyping);
 
+  // Only auto scroll when user is already at the bottom
   useEffect(() => {
     if (onMessage) onMessage(allMessages);
   }, [allMessages, onMessage]);
 
+  // remove unconditional autoscroll: respect user scroll position
   useEffect(() => {
-    scrollToBottom();
+    const len = deferredMessages.length;
+    const grew = len > prevLenRef.current;
+    prevLenRef.current = len;
+
+    if (grew && wasAtBottomRef.current) {
+      scrollToBottom();
+    }
   }, [deferredMessages, scrollToBottom]);
 
+  // When entering responding state, keep the typing indicator visible
   useEffect(() => {
     if (isResponding) scrollToBottom();
   }, [isResponding, scrollToBottom]);
@@ -293,6 +346,9 @@ export const RealtimeChat = ({
   const onSend = useCallback(
     (text: string) => {
       if (!text.trim() || !isConnected) return;
+      // Assume user wants to see their just-sent message
+      wasAtBottomRef.current = true;
+
       void sendMessage(text);
 
       const controller = new AbortController();
@@ -332,7 +388,16 @@ export const RealtimeChat = ({
   }, [abortRef]);
 
   return (
-    <div className="flex h-dvh w-full flex-col bg-background text-foreground antialiased">
+    <div className="relative flex h-dvh w-full flex-col bg-background text-foreground antialiased">
+      {/* Floating jump-to-bottom button */}
+      <ScrollToBottomFab
+        visible={!isAtBottom}
+        onClick={() => {
+          wasAtBottomRef.current = true;
+          scrollToBottom();
+        }}
+      />
+
       <MessagesList
         ref={containerRef}
         messages={deferredMessages}
@@ -343,12 +408,6 @@ export const RealtimeChat = ({
       <QuickSuggestions
         onSelect={onSend}
         disabled={!isConnected || isResponding}
-        suggestions={[
-          "What can you do",
-          "Summarize the last messages",
-          "Create a task list",
-          "Explain this code",
-        ]}
       />
 
       <InputBar
