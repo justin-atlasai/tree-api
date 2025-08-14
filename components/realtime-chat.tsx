@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import React, {
   memo,
@@ -10,13 +10,13 @@ import React, {
   useLayoutEffect,
   useDeferredValue,
   useRef,
-} from "react";
+} from 'react';
 
-import { ChatMessageItem } from "@/components/chat-message";
-import { useChatScroll } from "@/hooks/use-chat-scroll";
-import { type ChatMessage, useRealtimeChat } from "@/hooks/use-realtime-chat";
-import { Button } from "@/components/ui/button";
-import { Send, Square } from "lucide-react";
+import { ChatMessageItem } from '@/components/chat-message';
+import { useChatScroll } from '@/hooks/use-chat-scroll';
+import { type ChatMessage, useRealtimeChat } from '@/hooks/use-realtime-chat';
+import { Button } from '@/components/ui/button';
+import { Send, Square } from 'lucide-react';
 
 interface RealtimeChatProps {
   roomName: string;
@@ -36,7 +36,7 @@ const ChatRow = memo(function ChatRow({
   showHeader: boolean;
 }) {
   return (
-    <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
+    <div className='animate-in fade-in slide-in-from-bottom-4 duration-300'>
       <ChatMessageItem
         message={message}
         isOwnMessage={message.user.name === username}
@@ -53,14 +53,14 @@ const MessagesList = memo(
       return (
         <div
           ref={ref}
-          className="flex flex-1 flex-col justify-end overflow-y-auto p-4 space-y-4"
+          className='flex flex-1 flex-col justify-end overflow-y-auto p-4 space-y-4'
         >
           {messages.length === 0 ? (
-            <div className="text-center text-sm text-muted-foreground">
+            <div className='text-center text-sm text-muted-foreground'>
               No messages yet. Start the conversation!
             </div>
           ) : (
-            <div className="space-y-1">
+            <div className='space-y-1'>
               {messages.map((message, index) => {
                 const prev = index > 0 ? messages[index - 1] : null;
                 const showHeader =
@@ -78,8 +78,8 @@ const MessagesList = memo(
           )}
         </div>
       );
-    }
-  )
+    },
+  ),
 );
 
 /** Input is isolated so the list does not rerender on each keypress */
@@ -94,7 +94,7 @@ function InputBar({
   isLoading: boolean;
   onStop: () => void;
 }) {
-  const [value, setValue] = useState("");
+  const [value, setValue] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const maxHeightRef = useRef<number | null>(null);
   const MAX_LINES = 6;
@@ -106,27 +106,27 @@ function InputBar({
     // Compute the exact max height for six lines plus vertical chrome
     if (maxHeightRef.current == null) {
       const cs = window.getComputedStyle(el);
-      const lh = parseFloat(cs.lineHeight || "0");
-      const pt = parseFloat(cs.paddingTop || "0");
-      const pb = parseFloat(cs.paddingBottom || "0");
-      const bt = parseFloat(cs.borderTopWidth || "0");
-      const bb = parseFloat(cs.borderBottomWidth || "0");
+      const lh = parseFloat(cs.lineHeight || '0');
+      const pt = parseFloat(cs.paddingTop || '0');
+      const pb = parseFloat(cs.paddingBottom || '0');
+      const bt = parseFloat(cs.borderTopWidth || '0');
+      const bb = parseFloat(cs.borderBottomWidth || '0');
       maxHeightRef.current = Math.ceil(lh * MAX_LINES + pt + pb + bt + bb);
       el.style.maxHeight = `${maxHeightRef.current}px`;
     }
 
     // Auto-grow up to the cap. Then enable scrolling
-    el.style.height = "auto";
+    el.style.height = 'auto';
     const cap = maxHeightRef.current!;
     const next = Math.min(el.scrollHeight, cap);
     el.style.height = `${next}px`;
-    el.style.overflowY = el.scrollHeight > cap ? "auto" : "hidden";
+    el.style.overflowY = el.scrollHeight > cap ? 'auto' : 'hidden';
   }, [value]);
 
   const actuallySend = useCallback(() => {
     const text = value.trim();
     if (!text || disabled || isLoading) return;
-    setValue("");
+    setValue('');
     onSend(text);
   }, [value, disabled, isLoading, onSend]);
 
@@ -135,47 +135,47 @@ function InputBar({
       e.preventDefault();
       actuallySend();
     },
-    [actuallySend]
+    [actuallySend],
   );
 
   const onKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      if (e.key === "Enter" && !e.shiftKey) {
+      if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         actuallySend();
       }
     },
-    [actuallySend]
+    [actuallySend],
   );
 
   return (
     <form
       onSubmit={onSubmit}
-      className="sticky bottom-0 flex w-full items-center gap-2 border-t border-border bg-background p-4 mb-4"
+      className='sticky bottom-0 flex w-full items-center gap-2 border-t border-border bg-background p-4 mb-4'
     >
       <textarea
         ref={textareaRef}
         rows={1}
-        className="flex-1 resize-none rounded-xl border bg-background px-4 py-4 text-lg leading-relaxed md:text-base md:leading-snug placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+        className='flex-1 resize-none rounded-xl border bg-background px-4 py-4 text-lg leading-relaxed md:text-base md:leading-snug placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50'
         value={value}
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={onKeyDown}
-        placeholder="Type a message..."
+        placeholder='Type a message...'
         disabled={disabled || isLoading}
       />
       {isLoading ? (
-        <Button className="rounded-full p-3" type="button" onClick={onStop}>
-          <Square className="size-4" />
+        <Button className='rounded-full p-3' type='button' onClick={onStop}>
+          <Square className='size-4' />
         </Button>
       ) : (
         !disabled &&
         value.trim() && (
           <Button
-            className="rounded-full p-5"
-            type="submit"
+            className='rounded-full p-5'
+            type='submit'
             disabled={disabled}
           >
-            <Send className="size-5" />
+            <Send className='size-5' />
           </Button>
         )
       )}
@@ -216,15 +216,15 @@ export const RealtimeChat = ({
     }
     unique.sort(
       (a, b) =>
-        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
     );
     return unique;
   }, [initialMessages, realtimeMessages]);
 
   const typingMessage = {
-    id: "__typing__",
-    content: "",
-    user: { name: "assistant" },
+    id: '__typing__',
+    content: '',
+    user: { name: 'assistant' },
     createdAt: new Date().toISOString(),
     typing: true,
   };
@@ -259,30 +259,30 @@ export const RealtimeChat = ({
       setIsResponding(true);
 
       void fetch(
-        "https://justin.atlasagent.ai/webhook/5d983fb1-81cc-468a-97b1-bd143b1f5567",
+        'https://justin.atlasagent.ai/webhook/5d983fb1-81cc-468a-97b1-bd143b1f5567',
         {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ query: text, sessionId }),
           signal: controller.signal,
-        }
+        },
       )
         .then((r) => r.json())
         .then((data) => {
           if (data?.output) {
-            void sendMessage(data.output, "assistant");
+            void sendMessage(data.output, 'assistant');
           }
         })
         .catch((err) => {
-          if ((err as Error).name !== "AbortError") {
-            console.error("Failed to fetch chat response", err);
+          if ((err as Error).name !== 'AbortError') {
+            console.error('Failed to fetch chat response', err);
           }
         })
         .finally(() => {
           setIsResponding(false);
         });
     },
-    [isConnected, sendMessage, sessionId]
+    [isConnected, sendMessage, sessionId],
   );
 
   const onStop = useCallback(() => {
@@ -291,7 +291,7 @@ export const RealtimeChat = ({
   }, [abortRef]);
 
   return (
-    <div className="flex h-dvh w-full flex-col bg-background text-foreground antialiased">
+    <div className='flex h-dvh w-full flex-col bg-background text-foreground antialiased'>
       <MessagesList
         ref={containerRef}
         messages={deferredMessages}

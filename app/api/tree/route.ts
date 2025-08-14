@@ -1,6 +1,6 @@
-import { NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
+import { NextResponse } from 'next/server';
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 
 type Id = string | number;
 
@@ -23,7 +23,7 @@ async function getClient() {
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY;
 
   if (!url || !key) {
-    throw new Error("Missing Supabase environment variables");
+    throw new Error('Missing Supabase environment variables');
   }
 
   const cookieStore = await cookies();
@@ -87,7 +87,7 @@ function buildTree(nodes: NodeRow[]): TreeNode[] {
 export async function GET() {
   try {
     const supabase = await getClient();
-    const { data, error } = await supabase.from("tree_nodes").select("*");
+    const { data, error } = await supabase.from('tree_nodes').select('*');
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
@@ -96,7 +96,7 @@ export async function GET() {
     if (e instanceof Error) {
       return NextResponse.json({ error: e.message }, { status: 500 });
     }
-    return NextResponse.json({ error: "Unknown error" }, { status: 500 });
+    return NextResponse.json({ error: 'Unknown error' }, { status: 500 });
   }
 }
 
@@ -108,7 +108,7 @@ export async function POST(req: Request) {
     };
     const supabase = await getClient();
     const { data, error } = await supabase
-      .from("tree_nodes")
+      .from('tree_nodes')
       .insert({ label, parent_id: parentId })
       .select()
       .single();
@@ -120,7 +120,7 @@ export async function POST(req: Request) {
     if (e instanceof Error) {
       return NextResponse.json({ error: e.message }, { status: 500 });
     }
-    return NextResponse.json({ error: "Unknown error" }, { status: 500 });
+    return NextResponse.json({ error: 'Unknown error' }, { status: 500 });
   }
 }
 
@@ -129,9 +129,9 @@ export async function DELETE(req: Request) {
     const { id } = (await req.json()) as { id: Id };
     const supabase = await getClient();
     const { data, error } = await supabase
-      .from("tree_nodes")
+      .from('tree_nodes')
       .delete()
-      .eq("id", id)
+      .eq('id', id)
       .select()
       .single();
     if (error) {
@@ -142,6 +142,6 @@ export async function DELETE(req: Request) {
     if (e instanceof Error) {
       return NextResponse.json({ error: e.message }, { status: 500 });
     }
-    return NextResponse.json({ error: "Unknown error" }, { status: 500 });
+    return NextResponse.json({ error: 'Unknown error' }, { status: 500 });
   }
 }

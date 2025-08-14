@@ -1,70 +1,70 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 type TreeNode = { id: number; label: string; children: TreeNode[] };
 
 export default function Page() {
   const [tree, setTree] = useState<TreeNode[]>([]);
-  const [parentId, setParentId] = useState("");
-  const [label, setLabel] = useState("");
-  const [deleteId, setDeleteId] = useState("");
+  const [parentId, setParentId] = useState('');
+  const [label, setLabel] = useState('');
+  const [deleteId, setDeleteId] = useState('');
 
   const loadTree = async () => {
-    const res = await fetch("/api/tree");
+    const res = await fetch('/api/tree');
     const data = await res.json();
     setTree(data);
   };
 
   const addNode = async () => {
-    await fetch("/api/tree", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+    await fetch('/api/tree', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         parentId: parentId ? Number(parentId) : null,
         label,
       }),
     });
-    setParentId("");
-    setLabel("");
+    setParentId('');
+    setLabel('');
     loadTree();
   };
 
   const deleteNode = async () => {
-    await fetch("/api/tree", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
+    await fetch('/api/tree', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id: Number(deleteId) }),
     });
-    setDeleteId("");
+    setDeleteId('');
     loadTree();
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex gap-2">
+    <div className='space-y-4'>
+      <div className='flex gap-2'>
         <Input
-          placeholder="parentId"
+          placeholder='parentId'
           value={parentId}
           onChange={(e) => setParentId(e.target.value)}
         />
         <Input
-          placeholder="label"
+          placeholder='label'
           value={label}
           onChange={(e) => setLabel(e.target.value)}
         />
         <Button onClick={addNode}>Add Node</Button>
       </div>
 
-      <div className="flex gap-2">
+      <div className='flex gap-2'>
         <Input
-          placeholder="parentId"
+          placeholder='parentId'
           value={deleteId}
           onChange={(e) => setDeleteId(e.target.value)}
         />
-        <Button variant="destructive" onClick={deleteNode}>
+        <Button variant='destructive' onClick={deleteNode}>
           Delete Node
         </Button>
       </div>
