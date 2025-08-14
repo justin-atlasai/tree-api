@@ -17,13 +17,14 @@ type RunContext = {
   vars: Record<string, unknown>;
 };
 
-/** ---------- parsing: convert entire response to JSON then read real keys ---------- */
+/** parsing: convert response to JSON then normalize to an envelope */
 
 const isRecord = (x: unknown): x is Record<string, unknown> =>
   x !== null && typeof x === 'object' && !Array.isArray(x);
 
 const stripFirstCodeFence = (raw: string): string => {
-  const re = /```(?:json)?\s*([\s\S]*?)```/i;
+  // supports ```json ```json5 ```ts ```tsx and more
+  const re = /```(?:json5?|javascript|js|ts|tsx)?\s*([\s\S]*?)```/i;
   const m = re.exec(raw);
   return m ? m[1].trim() : raw.trim();
 };
@@ -36,61 +37,151 @@ const safeJsonParse = (text: string): unknown => {
   }
 };
 
-const toEnvelope = (val: unknown): ChainEnvelope | null => {
-  // case: val is already { chain: [...] }
-  if (isRecord(val) && Array.isArray(val.chain)) {
-    const chain = val.chain.filter(isToolCall);
-    return { chain };
+const coerceToolCall = (raw: unknown): ToolCall | null => {
+  if (!isRecord(raw)) return null;
+
+  const pickString = (obj: Record<string, unknown>, key: string) =>
+    typeof obj[key] === 'string' ? (obj[key] as string) : null;
+
+  // domain or tool
+  const tool =
+    pickString(raw, 'tool') ??
+    pickString(raw, 'domain') ??
+    // some payloads put the domain on raw.function.tool
+    (isRecord(raw.function) ? pickString(raw.function as any, 'tool') : null);
+
+  // name sources
+  const name =
+    pickString(raw, 'name') ??
+    (isRecord(raw.action) ? pickString(raw.action as any, 'name') : null) ??
+    (isRecord(raw.function) ? pickString(raw.function as any, 'name') : null);
+
+  // parameters sources
+  let parameters: unknown;
+  if ('parameters' in raw) parameters = (raw as any).parameters;
+  else if ('args' in raw) parameters = (raw as any).args;
+  else if ('arguments' in raw) parameters = (raw as any).arguments;
+  else if (isRecord(raw.payload)) parameters = raw.payload;
+
+  // if function.arguments is a JSON string then parse it
+  if (parameters === undefined && isRecord(raw.function)) {
+    const args = (raw.function as any).arguments;
+    if (typeof args === 'string') {
+      const parsed = safeJsonParse(args);
+      parameters = parsed ?? args;
+    } else if (args !== undefined) {
+      parameters = args;
+    }
   }
-  // case: val is an array of tool calls
-  if (Array.isArray(val)) {
-    const chain = val.filter(isToolCall);
-    return { chain };
+
+  // allow dotted function names like ContactAndIdentity.record_consent
+  if (!tool && name && name.includes('.')) {
+    const [maybeTool, maybeName] = name.split('.', 2);
+    if (maybeTool && maybeName) {
+      return { tool: maybeTool, name: maybeName, parameters };
+    }
   }
+
+  if (tool && name) return { tool, name, parameters };
+
+  // as a last chance: some payloads omit tool but include a nested tool field
+  if (
+    !tool &&
+    isRecord(parameters) &&
+    typeof (parameters as any).tool === 'string' &&
+    name
+  ) {
+    return { tool: String((parameters as any).tool), name, parameters };
+  }
+
   return null;
 };
 
-const isToolCall = (v: unknown): v is ToolCall => {
-  if (!isRecord(v)) return false;
-  return typeof v.tool === 'string' && typeof v.name === 'string';
+const collectCalls = (arrLike: unknown): ToolCall[] => {
+  if (!Array.isArray(arrLike)) return [];
+  return arrLike
+    .map((v) => coerceToolCall(v))
+    .filter((v): v is ToolCall => Boolean(v));
 };
 
-/** Accepts message.content as unknown. Returns a normalized envelope or null */
+const toEnvelope = (val: unknown): ChainEnvelope | null => {
+  // already an envelope
+  if (isRecord(val) && Array.isArray(val.chain)) {
+    const chain = collectCalls(val.chain);
+    return { chain };
+  }
+  // common container keys
+  if (isRecord(val)) {
+    const keys = ['calls', 'tool_calls', 'tools', 'actions'];
+    for (const k of keys) {
+      if (Array.isArray((val as any)[k])) {
+        const chain = collectCalls((val as any)[k]);
+        return { chain };
+      }
+    }
+  }
+  // array of calls
+  if (Array.isArray(val)) {
+    const chain = collectCalls(val);
+    return { chain };
+  }
+  // single call object
+  const single = coerceToolCall(val);
+  if (single) return { chain: [single] };
+
+  return null;
+};
+
+/** accepts message.content as unknown. returns a normalized envelope or null */
 function parseModelResponse(content: unknown): ChainEnvelope | null {
-  // If content is a string: try to parse as JSON or fenced JSON
+  // string path
   if (typeof content === 'string') {
     const unwrapped = stripFirstCodeFence(content);
     const parsed = safeJsonParse(unwrapped);
-    return toEnvelope(parsed);
+    const env = toEnvelope(parsed);
+    if (env) return env;
+    // try parsing the whole original if fenced parse failed
+    const parsedRaw = safeJsonParse(content);
+    return toEnvelope(parsedRaw);
   }
 
-  // If content is an object: look for a string field that holds the JSON
+  // object path that holds a string field with JSON
   if (isRecord(content)) {
-    // Strongest signal: output field like your example
-    if (typeof content.output === 'string') {
-      const unwrapped = stripFirstCodeFence(content.output);
-      const parsed = safeJsonParse(unwrapped);
-      const env = toEnvelope(parsed);
-      if (env) return env;
-    }
+    const tryStringField = (key: string) => {
+      if (typeof content[key] === 'string') {
+        const unwrapped = stripFirstCodeFence(String(content[key]));
+        const parsed = safeJsonParse(unwrapped);
+        const env = toEnvelope(parsed);
+        if (env) return env;
+      }
+      return null;
+    };
 
-    // Some stacks use content.content
-    if (typeof content.content === 'string') {
-      const unwrapped = stripFirstCodeFence(content.content);
-      const parsed = safeJsonParse(unwrapped);
-      const env = toEnvelope(parsed);
-      if (env) return env;
-    }
+    // strongest signals
+    let env =
+      tryStringField('output') ??
+      tryStringField('content') ??
+      tryStringField('text');
 
-    // As a fallback: the object itself might already be the envelope
-    const env = toEnvelope(content);
     if (env) return env;
+
+    // if none matched try toEnvelope on the object itself
+    env = toEnvelope(content);
+    if (env) return env;
+
+    // look inside a message field
+    if (isRecord(content.message)) {
+      env =
+        tryStringField.call(content.message as any, 'content') ??
+        toEnvelope(content.message);
+      if (env) return env;
+    }
   }
 
   return null;
 }
 
-/** ---------- tiny placeholder resolver for strings like "<hub_url>" ---------- */
+/** simple placeholder resolver */
 
 function resolvePlaceholders<T>(val: T, ctx: RunContext): T {
   if (typeof val === 'string') {
@@ -137,7 +228,7 @@ function setVar(ctx: RunContext, key: string, value: unknown) {
   }
 }
 
-/** ---------- handlers: switch by tool then name ---------- */
+/** handlers: map tool and name to UI blocks */
 
 type Handler = (params: unknown, ctx: RunContext) => Promise<string>;
 
@@ -324,7 +415,7 @@ function handlerFor(tool: string, name: string): Handler {
   }
 }
 
-/** ---------- orchestrator ---------- */
+/** orchestrator */
 
 async function runChain(envelope: ChainEnvelope): Promise<string> {
   const ctx: RunContext = { vars: {} };
@@ -338,7 +429,8 @@ async function runChain(envelope: ChainEnvelope): Promise<string> {
   return `<div class="space-y-3">${out.join('')}</div>`;
 }
 
-/** Runs when the message is not typing. Returns HTML or null */
+/** builds HTML from a message content value */
+
 async function buildHtmlFromMessageContent(
   content: unknown,
 ): Promise<string | null> {
@@ -347,7 +439,7 @@ async function buildHtmlFromMessageContent(
   return runChain(env);
 }
 
-/** ---------- React wrapper that plugs into your bubble ---------- */
+/** React wrapper that plugs into your bubble */
 
 function UseToolHtml({ content }: { content: unknown }) {
   const [html, setHtml] = React.useState<string | null>(null);
@@ -374,7 +466,7 @@ function UseToolHtml({ content }: { content: unknown }) {
   return <div dangerouslySetInnerHTML={{ __html: html }} />;
 }
 
-/** ---------- your original component with a single change inside the bubble ---------- */
+/** chat message item */
 
 interface ChatMessageItemProps {
   message: ChatMessage;
