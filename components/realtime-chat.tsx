@@ -30,7 +30,7 @@ function QuickSuggestions({
   onSelect,
   disabled,
   suggestions = [
-    'Save my contact and key links',
+    'Save my contact and view links',
     'Send a meeting recap with next steps',
     // 'Connect on LinkedIn with a personal note',
     // 'Share an intro kit for your team',
