@@ -43,7 +43,7 @@ function QuickSuggestions({
   return (
     <div className="bg-background px-4 pt-3 pb-4">
       <div className="mb-2 text-xs font-medium text-muted-foreground">
-        Try one of these
+        Explore what I can do
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
         {suggestions.map((text, i) => (
@@ -219,7 +219,7 @@ function InputBar({
         value={value}
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={onKeyDown}
-        placeholder="Type a message..."
+        placeholder="Ask me anything"
         disabled={disabled || isLoading}
       />
       {isLoading ? (
