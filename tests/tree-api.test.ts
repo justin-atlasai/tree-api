@@ -1,13 +1,13 @@
 /* eslint-env jest */
 
-process.env.NEXT_PUBLIC_SUPABASE_URL = "https://example.com";
-process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "anon-key";
+process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://example.com';
+process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'anon-key';
 
 const nodes: { id: number; label: string; parent_id: number | null }[] = [
-  { id: 1, label: "root", parent_id: null },
+  { id: 1, label: 'root', parent_id: null },
 ];
 
-jest.mock("@supabase/ssr", () => ({
+jest.mock('@supabase/ssr', () => ({
   createServerClient: () => ({
     from: () => ({
       select: () => Promise.resolve({ data: [...nodes], error: null }),
@@ -41,7 +41,7 @@ jest.mock("@supabase/ssr", () => ({
   }),
 }));
 
-jest.mock("next/headers", () => ({
+jest.mock('next/headers', () => ({
   cookies: async () => ({
     getAll: () => [],
     set: () => {},
@@ -49,22 +49,22 @@ jest.mock("next/headers", () => ({
 }));
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const { GET, POST, DELETE: DELETE_NODE } = require("../app/api/tree/route");
+const { GET, POST, DELETE: DELETE_NODE } = require('../app/api/tree/route');
 
-describe("tree API", () => {
-  test("GET /api/tree returns array", async () => {
+describe('tree API', () => {
+  test('GET /api/tree returns array', async () => {
     const res = await GET();
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(Array.isArray(data)).toBe(true);
   });
 
-  test("POST /api/tree inserts node", async () => {
+  test('POST /api/tree inserts node', async () => {
     const label = `test-node-${Date.now()}`;
     const res = await POST(
-      new Request("http://localhost/api/tree", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      new Request('http://localhost/api/tree', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ parentId: 1, label }),
       }),
     );
@@ -73,20 +73,20 @@ describe("tree API", () => {
     expect(data.label).toBe(label);
   });
 
-  test("DELETE /api/tree removes node", async () => {
+  test('DELETE /api/tree removes node', async () => {
     const label = `test-delete-${Date.now()}`;
     const createRes = await POST(
-      new Request("http://localhost/api/tree", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      new Request('http://localhost/api/tree', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ parentId: null, label }),
       }),
     );
     const created = await createRes.json();
     const deleteRes = await DELETE_NODE(
-      new Request("http://localhost/api/tree", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
+      new Request('http://localhost/api/tree', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: created.id }),
       }),
     );
