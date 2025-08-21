@@ -17,6 +17,41 @@ import { useChatScroll } from '@/hooks/use-chat-scroll';
 import { type ChatMessage, useRealtimeChat } from '@/hooks/use-realtime-chat';
 import { Button } from '@/components/ui/button';
 import { Send, Square, ChevronDown } from 'lucide-react';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+
+interface jsonCodeType {
+  outputObject: {
+    intent: string;
+    output: unknown;
+  };
+}
+
+async function autoTransform(input: string): Promise<string> {
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+
+  const prompt = `
+You are a transformer.
+You will receive arbitrary input (JSON, lists, or free text).
+Step 1: Detect the correct transformation intent.
+  - Names and emails → transformUserData
+  - Links with labels and urls → transformContactLinks
+  - Other structured data → invent a sensible intent.
+Step 2: Output valid JSON code:
+  - Always declare: { outputObject: { intent: "<detectedIntent>", output: "<detectedOutput>" } }
+  - Use camelCase keys
+  - Output only JSON code
+  - Do not use \`\`\` fences
+  - Do not include TypeScript types or annotations
+
+Input:
+${input}
+`;
+
+  const result = await model.generateContent(prompt);
+  return result.response.text();
+}
 
 interface RealtimeChatProps {
   roomName: string;
@@ -391,7 +426,40 @@ export const RealtimeChat = ({
         })
         .then((data) => {
           if (data?.output) {
-            void sendMessage(data.output, 'assistant');
+            autoTransform(data.output).then((jsonCode: string) => {
+              let messageOutput = '';
+
+              console.log(jsonCode);
+
+              const jsonConverted: jsonCodeType = JSON.parse(jsonCode);
+              const intent = jsonConverted.outputObject.intent;
+
+              switch (intent) {
+                case 'transformUserData':
+                  messageOutput = `User data detected:`;
+                  console.log(jsonConverted.outputObject.output);
+                  break;
+
+                case 'transformContactLinks':
+                  messageOutput = `Contact links detected:`;
+                  console.log(jsonConverted.outputObject.output);
+                  // handle links array here
+                  break;
+
+                case 'transformProducts':
+                  messageOutput = `Products detected:`;
+                  console.log(jsonConverted.outputObject.output);
+                  // handle products here
+                  break;
+
+                default:
+                  messageOutput = data.output;
+                  console.log(jsonConverted.outputObject);
+                  break;
+              }
+
+              void sendMessage(messageOutput, 'assistant');
+            });
           }
         })
         .catch((err) => {
