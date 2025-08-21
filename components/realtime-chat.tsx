@@ -21,6 +21,7 @@ import { Send, Square, ChevronDown } from 'lucide-react';
 interface RealtimeChatProps {
   roomName: string;
   username: string;
+  isPrivateChat: boolean;
   onMessage?: (messages: ChatMessage[]) => void;
   messages?: ChatMessage[];
 }
@@ -29,12 +30,7 @@ interface RealtimeChatProps {
 function QuickSuggestions({
   onSelect,
   disabled,
-  suggestions = [
-    'Save my contact and view links',
-    'Send a meeting recap with next steps',
-    // 'Connect on LinkedIn with a personal note',
-    // 'Share an intro kit for your team',
-  ],
+  suggestions = [],
 }: {
   onSelect: (text: string) => void;
   disabled: boolean;
@@ -245,6 +241,7 @@ function InputBar({
 export const RealtimeChat = ({
   roomName,
   username,
+  isPrivateChat,
   onMessage,
   messages: initialMessages = [],
 }: RealtimeChatProps) => {
@@ -314,6 +311,28 @@ export const RealtimeChat = ({
 
   const deferredMessages = useDeferredValue(allMessagesWithTyping);
 
+  const chatProps = isPrivateChat
+    ? {
+        suggestions: [
+          `Show my links`,
+          `Send a meeting recap with next steps`,
+          // `Connect on LinkedIn with a personal note`,
+          // `Share an intro kit for your team`,
+        ],
+        webhookUrl:
+          'https://justin.atlasagent.ai/webhook/c19652de-1a8e-4771-9148-4e8903001956',
+      }
+    : {
+        suggestions: [
+          `Save Justin's contact and view links`,
+          `Send me meeting recap with next steps`,
+          // `Connect on LinkedIn with a personal note`,
+          // `Share an intro kit for your team`,
+        ],
+        webhookUrl:
+          'https://justin.atlasagent.ai/webhook/5d983fb1-81cc-468a-97b1-bd143b1f5567',
+      };
+
   useEffect(() => {
     if (onMessage) onMessage(allMessages);
   }, [allMessages, onMessage]);
@@ -342,16 +361,34 @@ export const RealtimeChat = ({
       abortRef.current = controller;
       setIsResponding(true);
 
-      void fetch(
-        'https://justin.atlasagent.ai/webhook/5d983fb1-81cc-468a-97b1-bd143b1f5567',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query: text, sessionId }),
-          signal: controller.signal,
-        },
-      )
-        .then((r) => r.json())
+      void fetch(chatProps.webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: text, sessionId }),
+        signal: controller.signal,
+      })
+        .then(async (response) => {
+          // Check if the HTTP request was successful (e.g., status 200-299)
+          if (!response.ok) {
+            // Try to get more error details from the response body
+            const errorBody = await response
+              .text()
+              .catch(() => 'Could not read error body.');
+            throw new Error(
+              `HTTP error! status: ${response.status}, body: ${errorBody}`,
+            );
+          }
+
+          // Check for an empty response body before trying to parse JSON
+          const responseText = await response.text();
+          if (!responseText) {
+            // The response was successful but empty. This is not an error,
+            // but there's no data to process.
+            return null;
+          }
+
+          return JSON.parse(responseText);
+        })
         .then((data) => {
           if (data?.output) {
             void sendMessage(data.output, 'assistant');
@@ -359,14 +396,14 @@ export const RealtimeChat = ({
         })
         .catch((err) => {
           if ((err as Error).name !== 'AbortError') {
-            console.error('Failed to fetch chat response', err);
+            console.error('Failed to fetch chat response:', err);
           }
         })
         .finally(() => {
           setIsResponding(false);
         });
     },
-    [isConnected, sendMessage, sessionId],
+    [isConnected, sendMessage, chatProps.webhookUrl, sessionId],
   );
 
   const onStop = useCallback(() => {
@@ -394,6 +431,7 @@ export const RealtimeChat = ({
       {/* Row 2: suggestions */}
       {deferredMessages.length === 0 && (
         <QuickSuggestions
+          suggestions={chatProps.suggestions}
           onSelect={onSend}
           disabled={!isConnected || isResponding}
         />

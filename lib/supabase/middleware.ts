@@ -46,7 +46,8 @@ export async function updateSession(request: NextRequest) {
     !request.nextUrl.pathname.startsWith('/auth') &&
     !request.nextUrl.pathname.startsWith('/tree-nodes') &&
     !request.nextUrl.pathname.startsWith('/api/tree') &&
-    !request.nextUrl.pathname.startsWith('/chat')
+    !request.nextUrl.pathname.startsWith('/chat') &&
+    !request.nextUrl.pathname.startsWith('/chat-private')
   ) {
     // no user, potentially respond by redirecting the user to the login page
     const url = request.nextUrl.clone();

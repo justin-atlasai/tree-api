@@ -4,9 +4,9 @@ export default function Page() {
   return (
     <>
       <RealtimeChat
-        roomName='Chat'
+        roomName='Private Chat'
         username='justinrunes'
-        isPrivateChat={false}
+        isPrivateChat={true}
       />
     </>
   );
