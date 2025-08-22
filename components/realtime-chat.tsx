@@ -366,6 +366,7 @@ export const RealtimeChat = ({
         suggestions: [
           `View contact information`,
           `Send a meeting recap with next steps`,
+          `Give me qr code`,
           // `Connect on LinkedIn with a personal note`,
           // `Share an intro kit for your team`,
         ],
