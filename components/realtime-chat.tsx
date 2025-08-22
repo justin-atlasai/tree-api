@@ -375,9 +375,9 @@ export const RealtimeChat = ({
     : {
         suggestions: [
           `View Justin's contact info`,
-          `Get booking link`,
-          `Give me a bio summary of Justin`,
           `Connect on LinkedIn`,
+          `Give me a bio summary of Justin`,
+          `Get booking link`,
         ],
         webhookUrl:
           'https://justin.atlasagent.ai/webhook/5d983fb1-81cc-468a-97b1-bd143b1f5567',
