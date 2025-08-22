@@ -1,15 +1,10 @@
 import { cn } from '@/lib/utils';
 import type { ChatMessage } from '@/hooks/use-realtime-chat';
+import styles from './chat-message.module.css';
 
 function UseToolHtml({ content }: { content: unknown }) {
   if (typeof content === 'string') {
-    // crude check: if it looks like HTML, render it as such
-    const looksLikeHtml =
-      content.trim().startsWith('<') && content.trim().endsWith('>');
-    if (looksLikeHtml) {
-      return <div dangerouslySetInnerHTML={{ __html: content }} />;
-    }
-    return <>{content}</>;
+    return <div dangerouslySetInnerHTML={{ __html: content }} />;
   }
   try {
     return <>{JSON.stringify(content)}</>;
@@ -69,7 +64,9 @@ export const ChatMessageItem = ({
               <span className='w-1.5 h-1.5 rounded-full bg-current animate-bounce' />
             </span>
           ) : (
-            <UseToolHtml content={message.content} />
+            <div className={styles.messageContent}>
+              <UseToolHtml content={message.content} />
+            </div>
           )}
         </div>
       </div>

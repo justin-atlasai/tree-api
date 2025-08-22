@@ -1,0 +1,35 @@
+.messageContent h1 {
+  font-size: 1.45rem;
+  font-weight: 700;
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+
+.messageContent h2 {
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin-top: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.messageContent h3 {
+  font-size: 1.15rem;
+  font-weight: 600;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.messageContent p {
+  margin-bottom: 0.75rem;
+  line-height: 1.5;
+}
+
+.messageContent ul {
+  margin-bottom: 1rem;
+  padding-left: 1.25rem;
+  list-style-type: disc;
+}
+
+.messageContent li {
+  margin-bottom: 0.5rem;
+}

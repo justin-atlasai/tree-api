@@ -17,40 +17,55 @@ import { useChatScroll } from '@/hooks/use-chat-scroll';
 import { type ChatMessage, useRealtimeChat } from '@/hooks/use-realtime-chat';
 import { Button } from '@/components/ui/button';
 import { Send, Square, ChevronDown } from 'lucide-react';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+// import { GoogleGenerativeAI } from '@google/generative-ai';
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+// const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+// const genAI = new GoogleGenerativeAI('AIzaSyAUsT52YsaY6hYaA6u3huKkUaa25xGE9I8');
 
 interface jsonCodeType {
   outputObject: {
     intent: string;
-    output: unknown;
+    html: string;
+    jsonFormatOfHtml: object;
   };
 }
 
-async function autoTransform(input: string): Promise<string> {
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+// async function autoTransform(input: string): Promise<string> {
+//   const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
-  const prompt = `
-You are a transformer.
-You will receive arbitrary input (JSON, lists, or free text).
-Step 1: Detect the correct transformation intent.
-  - Names and emails → transformUserData
-  - Links with labels and urls → transformContactLinks
-  - Other structured data → invent a sensible intent.
-Step 2: Output valid JSON code:
-  - Always declare: { outputObject: { intent: "<detectedIntent>", output: "<detectedOutput>" } }
-  - Use camelCase keys
-  - Output only JSON code
-  - Do not use \`\`\` fences
-  - Do not include TypeScript types or annotations
+//   const prompt = `
+// You are a transformer.
+// You will receive arbitrary input (JSON, lists, or free text).
+// Step 1: Detect the correct transformation intent.
+//   - Names and emails → transformUserData
+//   - Links with labels and urls → transformContactLinks
+//   - Other structured data → invent a sensible intent.
+// Step 2: Output valid JSON code:
+//   - Always declare: { outputObject: { intent: "<detectedIntent>", output: "<detectedOutput>" } }
+//   - Use camelCase keys
+//   - Output only JSON code
+//   - Do not use \`\`\` fences
+//   - Do not include TypeScript types or annotations
 
-Input:
-${input}
-`;
+// Input:
+// ${input}
+// `;
 
-  const result = await model.generateContent(prompt);
-  return result.response.text();
+//   const result = await model.generateContent(prompt);
+//   return result.response.text();
+// }
+
+function removeJsonFences(text: string) {
+  let cleaned = text.trim();
+
+  if (cleaned.startsWith('```json')) {
+    cleaned = cleaned.slice(7).trimStart(); // remove ```json
+  }
+  if (cleaned.endsWith('```')) {
+    cleaned = cleaned.slice(0, -3).trimEnd(); // remove ```
+  }
+
+  return cleaned;
 }
 
 interface RealtimeChatProps {
@@ -74,7 +89,7 @@ function QuickSuggestions({
   return (
     <div className='bg-background px-4 pt-3 pb-4'>
       <div className='mb-2 text-xs font-medium text-muted-foreground'>
-        Explore what I can do
+        Suggestions
       </div>
       <div className='grid grid-cols-1 md:grid-cols-2 gap-2'>
         {suggestions.map((text, i) => (
@@ -349,7 +364,7 @@ export const RealtimeChat = ({
   const chatProps = isPrivateChat
     ? {
         suggestions: [
-          `Show my links`,
+          `View contact information`,
           `Send a meeting recap with next steps`,
           // `Connect on LinkedIn with a personal note`,
           // `Share an intro kit for your team`,
@@ -359,10 +374,10 @@ export const RealtimeChat = ({
       }
     : {
         suggestions: [
-          `Save Justin's contact and view links`,
-          `Send me meeting recap with next steps`,
-          // `Connect on LinkedIn with a personal note`,
-          // `Share an intro kit for your team`,
+          `View Justin's contact info`,
+          `Get booking link`,
+          `Give me a bio summary of Justin`,
+          `What services does he offer?`,
         ],
         webhookUrl:
           'https://justin.atlasagent.ai/webhook/5d983fb1-81cc-468a-97b1-bd143b1f5567',
@@ -426,40 +441,54 @@ export const RealtimeChat = ({
         })
         .then((data) => {
           if (data?.output) {
-            autoTransform(data.output).then((jsonCode: string) => {
-              let messageOutput = '';
+            let messageOutput = '';
 
-              console.log(jsonCode);
+            console.log(data.output);
 
-              const jsonConverted: jsonCodeType = JSON.parse(jsonCode);
-              const intent = jsonConverted.outputObject.intent;
+            let parsed;
+            try {
+              parsed = JSON.parse(removeJsonFences(data.output));
+            } catch {
+              parsed = {
+                outputObject: {
+                  intent: 'rawText',
+                  html: data.output,
+                  jsonFormatOfHtml: {},
+                },
+              };
+            }
 
-              switch (intent) {
-                case 'transformUserData':
-                  messageOutput = `User data detected:`;
-                  console.log(jsonConverted.outputObject.output);
-                  break;
+            const jsonConverted: jsonCodeType = parsed;
+            const intent = jsonConverted.outputObject.intent;
 
-                case 'transformContactLinks':
-                  messageOutput = `Contact links detected:`;
-                  console.log(jsonConverted.outputObject.output);
-                  // handle links array here
-                  break;
+            switch (intent) {
+              case 'transformUserData':
+                messageOutput = `User data detected:`;
+                console.log(jsonConverted.outputObject.jsonFormatOfHtml);
+                break;
 
-                case 'transformProducts':
-                  messageOutput = `Products detected:`;
-                  console.log(jsonConverted.outputObject.output);
-                  // handle products here
-                  break;
+              case 'transformContactLinks':
+                messageOutput = `Contact links detected:`;
+                console.log(jsonConverted.outputObject.jsonFormatOfHtml);
+                // handle links array here
+                break;
 
-                default:
-                  messageOutput = data.output;
-                  console.log(jsonConverted.outputObject);
-                  break;
-              }
+              case 'transformProducts':
+                messageOutput = `Products detected:`;
+                console.log(jsonConverted.outputObject.jsonFormatOfHtml);
+                // handle products here
+                break;
 
-              void sendMessage(messageOutput, 'assistant');
-            });
+              default:
+                messageOutput = jsonConverted.outputObject.html;
+                console.log(jsonConverted.outputObject);
+                break;
+            }
+
+            void sendMessage(messageOutput, 'assistant');
+            // autoTransform(data.output).then((jsonCode: string) => {
+
+            // });
           }
         })
         .catch((err) => {
