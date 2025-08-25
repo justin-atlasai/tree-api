@@ -16,6 +16,19 @@ type TreeNode = {
   children: TreeNode[];
 };
 
+function mapDbError(code?: string): number {
+  switch (code) {
+    case '23505':
+      return 409;
+    case '23503':
+    case '23502':
+    case 'PGRST116':
+      return 422;
+    default:
+      return 500;
+  }
+}
+
 async function getClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key =
@@ -106,16 +119,45 @@ export async function POST(req: Request) {
       label: string;
       parentId: Id | null;
     };
+
+    if (!label || !label.trim()) {
+      return NextResponse.json(
+        { error: 'Label is required' },
+        { status: 422 },
+      );
+    }
+
     const supabase = await getClient();
+
+    if (parentId !== null) {
+      const { data: parent, error: parentError } = await supabase
+        .from('tree_nodes')
+        .select('id')
+        .eq('id', parentId)
+        .single();
+      if (parentError || !parent) {
+        return NextResponse.json(
+          { error: 'Invalid parentId' },
+          { status: 422 },
+        );
+      }
+    }
+
     const { data, error } = await supabase
       .from('tree_nodes')
       .insert({ label, parent_id: parentId })
       .select()
       .single();
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return NextResponse.json(
+        { error: error.message },
+        { status: mapDbError(error.code) },
+      );
     }
-    return NextResponse.json(data);
+    return NextResponse.json(data, {
+      status: 201,
+      headers: { Location: `/api/tree/${data.id}` },
+    });
   } catch (e) {
     if (e instanceof Error) {
       return NextResponse.json({ error: e.message }, { status: 500 });

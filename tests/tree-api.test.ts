@@ -10,7 +10,25 @@ const nodes: { id: number; label: string; parent_id: number | null }[] = [
 jest.mock('@supabase/ssr', () => ({
   createServerClient: () => ({
     from: () => ({
-      select: () => Promise.resolve({ data: [...nodes], error: null }),
+      select: (columns?: string) => {
+        if (columns === '*') {
+          return Promise.resolve({ data: [...nodes], error: null });
+        }
+        return {
+          eq: (_col: string, id: number) => ({
+            single: () => {
+              const row = nodes.find((n) => n.id === id);
+              if (row) {
+                return Promise.resolve({ data: { id: row.id }, error: null });
+              }
+              return Promise.resolve({
+                data: null,
+                error: { code: 'PGRST116', message: 'No rows found' },
+              });
+            },
+          }),
+        };
+      },
       insert: ({
         label,
         parent_id,
@@ -20,6 +38,15 @@ jest.mock('@supabase/ssr', () => ({
       }) => ({
         select: () => ({
           single: () => {
+            if (nodes.some((n) => n.label === label)) {
+              return Promise.resolve({
+                data: null,
+                error: {
+                  code: '23505',
+                  message: 'duplicate key value violates unique constraint',
+                },
+              });
+            }
             const node = { id: nodes.length + 1, label, parent_id };
             nodes.push(node);
             return Promise.resolve({ data: node, error: null });
@@ -68,9 +95,52 @@ describe('tree API', () => {
         body: JSON.stringify({ parentId: 1, label }),
       }),
     );
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(201);
     const data = await res.json();
+    expect(res.headers.get('Location')).toBe(`/api/tree/${data.id}`);
     expect(data.label).toBe(label);
+  });
+
+  test('POST /api/tree rejects empty label', async () => {
+    const res = await POST(
+      new Request('http://localhost/api/tree', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ parentId: 1, label: '' }),
+      }),
+    );
+    expect(res.status).toBe(422);
+  });
+
+  test('POST /api/tree rejects invalid parentId', async () => {
+    const label = `test-invalid-parent-${Date.now()}`;
+    const res = await POST(
+      new Request('http://localhost/api/tree', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ parentId: 9999, label }),
+      }),
+    );
+    expect(res.status).toBe(422);
+  });
+
+  test('POST /api/tree handles conflicts', async () => {
+    const label = 'duplicate';
+    await POST(
+      new Request('http://localhost/api/tree', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ parentId: 1, label }),
+      }),
+    );
+    const res = await POST(
+      new Request('http://localhost/api/tree', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ parentId: 1, label }),
+      }),
+    );
+    expect(res.status).toBe(409);
   });
 
   test('DELETE /api/tree removes node', async () => {
