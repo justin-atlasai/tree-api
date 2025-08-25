@@ -2,16 +2,14 @@ import { NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 
-type Id = string | number;
-
 type NodeRow = {
-  id: Id;
+  id: string;
   label: string;
-  parent_id: Id | null;
+  parent_id: string | null;
 };
 
 type TreeNode = {
-  id: Id;
+  id: string;
   label: string;
   children: TreeNode[];
 };
@@ -52,49 +50,44 @@ async function getClient() {
 }
 
 function buildTree(nodes: NodeRow[]): TreeNode[] {
-  const map = new Map<
-    Id,
-    { id: Id; label: string; children: TreeNode[]; parent_id: Id | null }
-  >();
+  // A map for quick lookups of nodes by their ID.
+  const nodeMap = new Map<string, TreeNode>();
 
-  nodes.forEach((n) => {
-    map.set(n.id, {
-      id: n.id,
-      label: n.label,
-      children: [],
-      parent_id: n.parent_id,
-    });
-  });
-
+  // An array to store the root nodes (those without a parent).
   const roots: TreeNode[] = [];
 
-  map.forEach((node) => {
-    if (node.parent_id) {
-      const parent = map.get(node.parent_id);
+  // First pass: Create a TreeNode for each row and store it in the map.
+  // This ensures every node exists in our map before we start linking them.
+  for (const row of nodes) {
+    nodeMap.set(row.id, {
+      id: row.id,
+      label: row.label,
+      children: [], // Initialize children as an empty array.
+    });
+  }
+
+  // Second pass: Link children to their parents.
+  // We iterate through the original nodes again to access parent_id.
+  for (const row of nodes) {
+    const node = nodeMap.get(row.id);
+
+    // This should always find a node, but it's good practice to check.
+    if (!node) continue;
+
+    if (row.parent_id) {
+      // This is a child node. Find its parent in the map.
+      const parent = nodeMap.get(row.parent_id);
       if (parent) {
-        parent.children.push(node as TreeNode);
+        // Add the current node to its parent's children array.
+        parent.children.push(node);
       }
     } else {
-      roots.push(node as TreeNode);
+      // This is a root node (it has no parent).
+      roots.push(node);
     }
-  });
+  }
 
-  const stripParent = (n: {
-    id: Id;
-    label: string;
-    children: unknown[];
-  }): TreeNode => {
-    const { id, label, children } = n;
-    return {
-      id,
-      label,
-      children: children.map((child) =>
-        stripParent(child as { id: Id; label: string; children: unknown[] }),
-      ),
-    };
-  };
-
-  return roots.map(stripParent);
+  return roots;
 }
 
 export async function GET() {
@@ -117,14 +110,11 @@ export async function POST(req: Request) {
   try {
     const { label, parentId } = (await req.json()) as {
       label: string;
-      parentId: Id | null;
+      parentId: string | null;
     };
 
     if (!label || !label.trim()) {
-      return NextResponse.json(
-        { error: 'Label is required' },
-        { status: 422 },
-      );
+      return NextResponse.json({ error: 'Label is required' }, { status: 422 });
     }
 
     const supabase = await getClient();
@@ -168,7 +158,7 @@ export async function POST(req: Request) {
 
 export async function DELETE(req: Request) {
   try {
-    const { id } = (await req.json()) as { id: Id };
+    const { id } = (await req.json()) as { id: string };
     const supabase = await getClient();
     const { data, error } = await supabase
       .from('tree_nodes')
