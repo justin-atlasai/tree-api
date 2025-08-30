@@ -1,7 +1,7 @@
 'use client';
 
 import { createClient } from '@/lib/supabase/client';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useMemo } from 'react';
 
 interface UseRealtimeChatProps {
   roomName: string;
@@ -21,7 +21,10 @@ export interface ChatMessage {
 const EVENT_MESSAGE_TYPE = 'message';
 
 export function useRealtimeChat({ roomName, username }: UseRealtimeChatProps) {
-  const supabase = createClient();
+  // Creating a client on each render causes the effect below to re-run and
+  // subscribe multiple times. Memoise the client so it stays stable across
+  // renders.
+  const supabase = useMemo(() => createClient(), []);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [channel, setChannel] = useState<ReturnType<
     typeof supabase.channel
@@ -46,7 +49,7 @@ export function useRealtimeChat({ roomName, username }: UseRealtimeChatProps) {
     return () => {
       supabase.removeChannel(newChannel);
     };
-  }, [roomName, username, supabase]);
+  }, [roomName, supabase]);
 
   const sendMessage = useCallback(
     async (content: string, senderName = username) => {
